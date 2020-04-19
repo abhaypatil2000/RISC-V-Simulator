@@ -62,11 +62,15 @@ eg. .asciiz "hello" 'helo' and .asciiz 'hello',"helo" both will work
 6. Editor is not for editing your code. It is to view the code written.
 
 7. There should be no space between a label and the following ':'.
-eg. label: is correct method and label : is wrong
+eg. (label:) is correct method and (label :) is wrong
 
-8. After declaring a label add another line add x0 x0 x0
+8. After a label is declared the following instruction must be on the same line and without a space.
+eg. (label:add x1, x2, x3) is correct, (label: '\n' add x1, x2, x3) is wrong and (label : add x1, x2, x3) is also wrong.
 
-9. If the code doesnt run try running the program again
+9. Each line with instruction should directly start with instruction, ie., there should be no space between start of line adn the instructoin.
+eg. (add x1, x2, x3) is valid but ( add x1, x2, x3) is invalid.
+
+10. If the code doesnt run try running the program again.
 
 
 
