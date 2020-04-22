@@ -62,5 +62,5 @@ def parseDoc(lines):
         lines[i]=preprocessing(lines[i])
      
 
-    print(lines)
+    #print(lines)
     return lines
