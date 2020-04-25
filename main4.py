@@ -1,37 +1,8 @@
+#No data Forwarding
+
+
 from bitstring import BitArray
 from copy import deepcopy
-#Control Signals
-Branch = 0
-MemRead = 0
-MemtoReg = 0
-# ALUOp = 0
-MemWrite = 0
-ALUSrc1 = 0
-ALUSrc2 = 0
-PCSrc = -1
-PCReg = 0  #Signal if the PC is updated by the Register value
-
-#Register File inputs and Outputs
-RegWrite = 0
-ReadData1 = 0
-ReadData2 = 0
-ReadRegister1 = 0
-ReadRegister2 = 0
-WriteRegister = 0
-WriteDataRegFile = 0
-
-#Immediate Generation
-ImmGenOutput = 0
-
-#ALU Control
-ALUControl = 0
-
-#ALUinputs
-ALU_input1 = 0
-ALU_input2 = 0
-
-#PC
-PC = 0
 
 #Buffer Register
 RegFD = 0
@@ -39,8 +10,42 @@ RegDE = 0
 RegEM = 0
 RegMW = 0
 
+#Control Signals
+Branch = 0#
+MemRead = 0#
+MemtoReg = 0#
+# ALUOp = 0
+MemWrite = 0#
+ALUSrc1 = 0#
+ALUSrc2 = 0#
+PCSrc = -1 #If the PC is updated from the instruction
+PCReg = 0  #Signal if the PC is updated by the Register value
+
+#Register File inputs and Outputs
+RegWrite = 0#
+ReadData1 = 0#
+ReadData2 = 0#
+ReadRegister1 = 0#
+ReadRegister2 = 0#
+WriteRegister = 0#
+WriteDataRegFile = 0#
+
+#Immediate Generation
+ImmGenOutput = 0#
+
+#ALU Control
+ALUControl = 0#
+
+#ALUinputs
+ALU_input1 = 0#
+ALU_input2 = 0#
+
+#PC
+PC = 0
+
+
 #Instruction Memory
-ReadAddress = 0
+ReadAddress = 0#
 InstructionF = '0' * 32
 InstructionD = '0' * 32
 InstructionE = '0' * 32
@@ -48,15 +53,15 @@ InstructionM = '0' * 32
 InstructionW = '0' * 32
 
 #ALU output
-Zero = 0
-LessThan = 0
-GE = 0
-ALUResult = 0
+Zero = 0#
+LessThan = 0#
+GE = 0#
+ALUResult = 0#
 
 #Data Memory
-Address = 0
-WriteData = 0
-ReadData = 0
+Address = 0#
+WriteData = 0#
+ReadData = 0#
 
 #Exit Signal
 EXIT = False
@@ -277,12 +282,17 @@ def fetch():
     global TempMem
     #Exit
     global EXIT
+    #if PC != PC + 4 then flush the last two pipelines which are in FETCH and DECODE
     if (PCReg == 1):
         PC = ALUResult
+        PCReg = 0
+        PCSrc = 0
+        #FLUSH TODO
     elif (PCSrc == 0):
         PC = PC + 4
     elif (PCSrc == 1):
         PC = PC + (ImmGenOutput << 1)
+        #FLUSH TODO
     ReadAddress = PC
     InstructionF = "{:032b}".format(int(read_word(ReadAddress), 16))
     # if (int(InstructionD, 2) == 0):  #TODO
@@ -775,6 +785,7 @@ def main3():
     RegList.append(deepcopy(reg_file))
     EXIT = False
     while (True):
+        #Flush TODO
         InstructionW = InstructionM
         # RegMW = RegEM
         InstructionM = InstructionE
@@ -782,12 +793,12 @@ def main3():
         InstructionE = InstructionD
         # RegDE = RegFD
         InstructionD = InstructionF
+        writeback()
+        memory_access()
+        execute()
+        decode()
         fetch()
         PCList.append(PC)
-        decode()
-        execute()
-        memory_access()
-        writeback()
         MemList.append(deepcopy(TempMem))
         RegList.append(deepcopy(reg_file))
         #print(count)
