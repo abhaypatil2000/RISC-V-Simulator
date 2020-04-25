@@ -33,6 +33,12 @@ ALU_input2 = 0
 #PC
 PC = 0
 
+#Buffer Register
+RegFD = 0
+RegDE = 0
+RegEM = 0
+RegMW = 0
+
 #Instruction Memory
 ReadAddress = 0
 InstructionF = '0' * 32
@@ -279,8 +285,8 @@ def fetch():
         PC = PC + (ImmGenOutput << 1)
     ReadAddress = PC
     InstructionF = "{:032b}".format(int(read_word(ReadAddress), 16))
-    if (int(InstructionD, 2) == 0):
-        EXIT = True
+    # if (int(InstructionD, 2) == 0):  #TODO
+    # EXIT = True
 
 
 def decode():
@@ -345,9 +351,11 @@ def decode():
 
     if (EXIT):
         return
-        exit_routine()
-        # if(int(InstructionD, 2) == 0):
-        # EXIT = True
+    if (int(InstructionD) == 0):
+        return
+    #  exit_routine()
+    # if(int(InstructionD, 2) == 0):
+    # EXIT = True
     else:
         opcode = InstructionD[25:]
         func3 = InstructionD[17:20]
@@ -499,6 +507,8 @@ def execute():
     global EXIT
     if (EXIT):
         return
+    if (int(InstructionE) == 0):
+        return
     if (ALUSrc1 == 0):
         ALU_input1 = ReadData1
     elif (ALUSrc1 == 1):
@@ -617,6 +627,8 @@ def memory_access():
     global EXIT
     if (EXIT):
         return
+    if (int(InstructionM) == 0):
+        return
     Address = ALUResult
     WriteData = BitArray(int=ReadData2, length=32).bin
     if (MemRead != 0):
@@ -707,6 +719,8 @@ def writeback():
     global EXIT
     if (EXIT):
         return
+    if (int(InstructionW) == 0):
+        return
     if (RegWrite == 1):
         if (MemtoReg == 0):
             WriteDataRegFile = ALUResult
@@ -721,6 +735,15 @@ def writeback():
             reg_file['x' + str((WriteRegister + 1) % 32)] = BitArray(hex=ReadData[0:8]).int
     reg_file['x0'] = 0
 
+def check():
+    global InstructionF
+    global InstructionD
+    global InstructionE
+    global InstructionM
+    global InstructionW
+
+    if (int(InstructionF) == int(InstructionD) == int(InstructionE) == int(InstructionM) == int(InstructionW) == 0):
+        EXIT = True
 
 PCList = []
 MemList = []
@@ -736,6 +759,10 @@ def main3():
     global RegList
     global PCList
     global InstCount
+    global RegFD
+    global RegDE
+    global RegEM
+    global RegMW
     global InstructionF
     global InstructionD
     global InstructionE
@@ -748,19 +775,26 @@ def main3():
     RegList.append(deepcopy(reg_file))
     EXIT = False
     while (True):
-        fetch()
+        InstructionW = InstructionM
+        # RegMW = RegEM
+        InstructionM = InstructionE
+        # RegEM = RegDE
+        InstructionE = InstructionD
+        # RegDE = RegFD
         InstructionD = InstructionF
+        fetch()
         PCList.append(PC)
         decode()
-        InstructionE = InstructionD
         execute()
-        InstructionM = InstructionE
         memory_access()
-        InstructionW = InstructionM
         writeback()
         MemList.append(deepcopy(TempMem))
         RegList.append(deepcopy(reg_file))
         #print(count)
+
+        check()  #check for exit condition when all instructions are 0
+
         InstCount = InstCount + (0 if EXIT else 1)
         if (EXIT):
+            exit_routine()
             break
