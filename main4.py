@@ -797,6 +797,8 @@ def check():
     global InstructionM
     global InstructionW
 
+    global EXIT
+    
     if (int(InstructionF) == int(InstructionD) == int(InstructionE) == int(InstructionM) == int(InstructionW) == 0):
         EXIT = True
 
