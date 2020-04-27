@@ -50,6 +50,18 @@ for i, j in REGTEMP.items():
 
 #}
 
+#Pipelining Registers
+PipE = 0
+PipM = 0
+PipRegs = [
+    PipE,
+    PipM
+]
+
+#DataForwarding
+ForwardA = '00'
+ForwardB = '00'
+
 #Control Signals
 # Branch = 0  #
 # MemRead = 0  #
@@ -407,7 +419,11 @@ def decode():
     global TempMem
     #Exit
     global EXIT
-
+    #Data Forwarding
+    global ForwardA
+    global ForwardB
+    #Pipelining
+    global PipE
     if (EXIT):
         return
     if (int(InstructionD) == 0):
@@ -502,9 +518,77 @@ def decode():
             RegFD['ALUControl'] = 0
         if (opcode == '1100011' and (func3 == '000' or func3 == '001')):
             RegFD['ALUControl'] = 7
+
+        checkExHazard()
+        CheckMemHazard()
+
         RegFD['ReadData1'] = reg_file['x' + str(RegFD['ReadRegister1'])]
         RegFD['ReadData2'] = reg_file['x' + str(RegFD['ReadRegister2'])]
 
+        if ForwardA == '10':
+            RegFD['ReadData1'] = PipE
+        elif ForwardA == '01':
+            RegFD['ReadData1'] = PipM
+
+        if ForwardB == '10':
+            RegFD['ReadData2'] = PipE
+        elif ForwardB == '01':
+            RegFD['ReadData2'] = PipM
+
+
+    
+
+
+def checkExHazard():
+    global ForwardA
+    global ForwardB
+    global RegDE
+    global RegFD
+
+    if (
+            (RegDE['RegWrite'] == 1) and 
+            (RegDE['WriteRegister'] != 0) and 
+            (RegDE['WriteRegister'] == RegFD['ReadRegister1']) 
+        ):
+        ForwardA = '10'
+    
+    if (
+            (RegDE['RegWrite'] == 1) and 
+            (RegDE['WriteRegister'] != 0) and 
+            (RegFD['WriteRegister'] == RegFD['ReadRegister2'])
+        ):
+        ForwardB = '10'
+
+def CheckMemHazard():
+    global ForwardA
+    global ForwardB
+    global RegFD
+    global RegEM
+    global RegDE
+
+    if (
+        RegEM['RegWrite'] == 1 and
+        RegEM['WriteRegister'] != 0 and
+        not (
+            (RegDE['RegWrite'] == 1) and 
+            (RegDE['WriteRegister'] != 0) and 
+            (RegDE['WriteRegister'] == RegFD['ReadRegister1']) 
+        ) and
+        RegEM['WriteRegister'] == RegFD['ReadRegister1']
+    ): 
+        ForwardA = '01'
+
+    if (
+        RegEM['RegWrite'] == 1 and
+        RegEM['WriteRegister'] != 0 and
+        not (
+            (RegDE['RegWrite'] == 1) and 
+            (RegDE['WriteRegister'] != 0) and 
+            (RegDE['WriteRegister'] == RegFD['ReadRegister2']) 
+        ) and
+        RegEM['WriteRegister'] == RegFD['ReadRegister2']
+    ):
+        ForwardB = '01'
 
 def execute():
     global RegDE
@@ -568,6 +652,8 @@ def execute():
     #Instruction count
     global InstCount
 
+    #Pipelining Regs
+    global PipE
     #Exit
     global EXIT
     if (EXIT):
@@ -631,6 +717,8 @@ def execute():
         PCSrc = 1
     InstCount = InstCount + 1
 
+    PipE = RegDE['ALUResult']
+
 
 def memory_access():
     global RegEM
@@ -690,6 +778,9 @@ def memory_access():
 
     #TempMem
     global TempMem
+
+    #Pipelining Regs
+    global PipM
     #Exit
     global EXIT
     if (EXIT):
@@ -724,6 +815,7 @@ def memory_access():
             RegEM['WriteData'] = "{:016x}".format(int(RegEM['WriteData'], 2))
             write_dword(RegEM['Address'], RegEM['WriteData'])
 
+    PipM = RegEM['ReadData']
 
 def writeback():
     global RegMW
