@@ -3,9 +3,11 @@
 from bitstring import BitArray
 from copy import deepcopy
 
+prediction = 0  #TODO prediction changes the fetch and decode
+#TODO STALL them when no prediction
 #Buffer Registers
 #{
-#add PC to the registers as decode ,memory access, writebackneed it
+#add PC to the registers as decode ,memory access, writebackneed it #TODO (DONE)
 REGTEMP = {}
 REGTEMP['Branch'] = 0
 REGTEMP['MemRead'] = 0
@@ -33,6 +35,7 @@ REGTEMP['Address'] = 0
 REGTEMP['WriteData'] = 0
 REGTEMP['ReadData'] = 0
 REGTEMP['PC'] = 0
+REGTEMP['BranchTaken'] = 0  #As decided by the branch prediction
 
 RegFD = {}
 RegDE = {}
@@ -262,8 +265,7 @@ def write_dword(address, data):
 
 
 def fetch():
-    global RegEM  #as the PC is dependent on the last execute made
-    global RegDE
+    global RegDE  #as the PC is dependent on the last execute made
     #Control Signals
     # global Branch
     # global MemRead
@@ -322,21 +324,27 @@ def fetch():
     global TempMem
     #Exit
     global EXIT
-    #if PC != PC + 4 then flush the last two pipelines which are in FETCH and DECODE#TODO
     if (PCReg == 1):
         PC = RegDE['ALUResult']
         PCReg = 0
         PCSrc = 0
-        #FLUSH TODO
+        if (RegDE['BranchTaken'] == 0):  # TODO dont flush if these values are taken from the prediction table (DONE)
+            flush()
     elif (PCSrc == 0):
         PC = PC + 4
+        if (RegDE['BranchTaken'] == 1):
+            flush()
     elif (PCSrc == 1):
         PC = PC + (RegDE['ImmGenOutput'] << 1)
-        #FLUSH TODO
-    ReadAddress = PC  #TODO
+        if (RegDE['BranchTaken'] == 0):  # TODO dont flush if these values are taken from the prediction table (DONE)
+            flush()
+    ReadAddress = PC  #TODO problem for the first two read instructions (DONE)
+    PCSrc = 0  #This would make the next instruction to be the PC + 4
+    PCReg = 0  #This would make the next instruction to be the PC + 4
     InstructionF = "{:032b}".format(int(read_word(ReadAddress), 16))
-    # if (int(InstructionD, 2) == 0):  #TODO
-    # EXIT = True
+
+    #TODO add input from the prediction merge with Gurpreet
+    #take the input in teh RegDE['ImmGenOutput']
 
 
 def decode():
@@ -408,6 +416,7 @@ def decode():
     # if(int(InstructionD, 2) == 0):
     # EXIT = True
     else:
+        RegFD['PC'] = PC
         opcode = InstructionD[25:]
         func3 = InstructionD[17:20]
         func7 = InstructionD[0:7]
@@ -555,6 +564,10 @@ def execute():
 
     #TempMem
     global TempMem
+
+    #Instruction count
+    global InstCount
+
     #Exit
     global EXIT
     if (EXIT):
@@ -616,6 +629,7 @@ def execute():
         PCSrc = 1
     elif (opcode == '1101111'):
         PCSrc = 1
+    InstCount = InstCount + 1
 
 
 def memory_access():
@@ -796,7 +810,6 @@ def check():
     global InstructionE
     global InstructionM
     global InstructionW
-
     global EXIT
     
     if (int(InstructionF) == int(InstructionD) == int(InstructionE) == int(InstructionM) == int(InstructionW) == 0):
@@ -806,12 +819,13 @@ def check():
 PCList = []
 MemList = []
 RegList = []
-InstCount = 0
+InstCount = 0  #Counted in Execute step
 count = 0
 
 
-def flush():  #TODO
+def flush():
     global PC
+    global REGTEMP
     global PCList
     global InstructionF
     global InstructionD
@@ -822,7 +836,15 @@ def flush():  #TODO
     global RegDE
     global RegEM
     global RegMW
-    #update PC #TODO
+    InstructionF = '0' * 32
+    InstructionD = '0' * 32
+    for i, j in REGTEMP.items():
+        RegFD[i] = j
+        RegDE[i] = j
+    PCList.pop()
+    PCList.pop()
+    PC = RegDE['PC']
+    #TODO update PC (DONE)
 
 
 def main3():
@@ -847,8 +869,9 @@ def main3():
     MemList.append(deepcopy(TempMem))
     RegList.append(deepcopy(reg_file))
     EXIT = False
+    clock = 0
     while (True):
-        #Flush TODO
+        #TODO Flush (DONE)
         InstructionW = InstructionM
         RegMW = RegEM
         InstructionM = InstructionE
@@ -864,11 +887,20 @@ def main3():
         PCList.append(PC)
         MemList.append(deepcopy(TempMem))
         RegList.append(deepcopy(reg_file))
-        #print(count)
+
+        # print(count)
 
         check()  #check for exit condition when all instructions are 0
 
-        InstCount = InstCount + (0 if EXIT else 1)
+        clock = clock + (0 if EXIT else 1)
         if (EXIT):
             exit_routine()
             break
+
+
+#TODO
+# 1. no increament in PC when fetching the first 2 or 3 instructions (DONE)
+# 2. PCSrs and PCReg are being modified from the prediction table
+# 3. For data forwarding from E use ALUResult
+# 4. Remove PC from the PCList twice on flush (DONE)
+# 5. Halt when dependency occurs if prediction == 0
