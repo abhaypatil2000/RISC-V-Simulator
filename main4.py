@@ -2,6 +2,7 @@
 
 from bitstring import BitArray
 from copy import deepcopy
+from btb import *
 
 prediction = 0  #TODO prediction changes the fetch and decode
 #TODO STALL them when no prediction
@@ -54,6 +55,7 @@ for i, j in REGTEMP.items():
 FLUSHDONE = 0
 #Branching
 BRANCHTOBETAKEN = 0
+currSTATE='NT'
 #Pipelining Registers
 PipE = 0
 PipM = 0
