@@ -340,7 +340,8 @@ def fetch():
     global EXIT
     #GURPREET ADD DECISION MAKING
     if (BRANCHTOBETAKEN == 1):
-        PC = XYZ
+        PC = UPDATEDPC
+        BRANCHTOBETAKEN = 0
     elif (PCReg == 1):
         PC = RegDE['ALUResult']
         PCReg = 0
