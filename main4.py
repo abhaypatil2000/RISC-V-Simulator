@@ -338,7 +338,16 @@ def fetch():
     global TempMem
     #Exit
     global EXIT
-    #GURPREET ADD DECISION MAKING
+    
+    if PC in btb:
+         currSTATE=returnCurrentState(PC)
+         if currSTATE!='NT':
+             BRANCHTOBETAKEN=1
+             UPDATEDPC=returnTakenAddress(PC)
+         else:
+             BRANCHTOBETAKEN=0
+    
+    
     if (BRANCHTOBETAKEN == 1):
         PC = UPDATEDPC
         BRANCHTOBETAKEN = 0
@@ -467,20 +476,36 @@ def decode():
             RegFD['MemWrite'] = int(func3, 2) + 1
             RegFD['ALUSrc2'] = 1
             RegFD['ALUSrc1'] = 0
-        elif (opcode == '1100011'):
+        elif (opcode == '1100011'):    #branch
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0] + InstructionD[24] + InstructionD[1:7] + InstructionD[20:24]).int
             RegFD['ALUSrc2'] = 0
             RegFD['ALUSrc1'] = 0
+            
+            if PC not in btb:
+                #prePC=PC
+                offset = RegFD['ImmGenOutput'] << 1
+                #PC = PC + offset
+                if offset<0:
+                    add_instruction(PC,PC+offset,'T')
+                    RegFD['BranchTaken']=1
+                else:
+                    add_instruction(PC,PC+offset,'NT')
+                    RegFD['BranchTaken']=0
+                    
         elif (opcode == '0010111' or opcode == '0110111'):
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0:20]).int
             RegFD['ALUSrc2'] = 2
             RegFD['ALUSrc1'] = 1 if opcode == '0010111' else 2
-        elif (opcode == '1101111'):
+        elif (opcode == '1101111'):     #jal
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0] + InstructionD[12:20] + InstructionD[11] + InstructionD[1:11]).int
             RegFD['ALUSrc2'] = 0
             RegFD['ALUSrc1'] = 0
             RegFD['MemtoReg'] = 2
             RegFD['Branch'] = 1
+            
+            if PC not in btb:
+                add_instruction(PC,PC+(RegFD['ImmGenOutput'] << 1),'T')
+                
         else:
             RegFD['ALUSrc2'] = 0
             RegFD['ALUSrc1'] = 0
