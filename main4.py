@@ -511,7 +511,7 @@ def decode():
 
             if PC not in btb:
                 add_instruction(PC, PC + (RegFD['ImmGenOutput'] << 1), 'T')
-                regFD['BranchTaken']=1
+                RegFD['BranchTaken']=1
 
         else:
             RegFD['ALUSrc2'] = 0
