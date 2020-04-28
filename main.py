@@ -107,7 +107,7 @@ def main1(file_name):
     
     
     
-main1("input.txt")
+#main1("input.txt")
 #main3()
 #print(InstCount)
 

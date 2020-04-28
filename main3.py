@@ -662,5 +662,7 @@ def main3():
         InstCount = InstCount + (0 if EXIT else 1)
         if(EXIT):
             break
-        
 #main3()
+#print(InstCount)
+#print(PCList)
+#print(RegList[InstCount]) 
