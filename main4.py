@@ -280,6 +280,7 @@ def write_dword(address, data):
 def fetch():
     global RegDE  #as the PC is dependent on the last execute made
     global BRANCHTOBETAKEN
+    global currSTATE
     #Control Signals
     # global Branch
     # global MemRead
@@ -725,6 +726,11 @@ def execute():
         PCSrc = 1
     InstCount = InstCount + 1
 
+    if PCSrc==1 and currSTATE=='NT':
+        update_state(PC,'T')
+    elif PCSrc==0 and currSTATE=='T':
+        update_state(PC,'NT')
+    
     PipE = RegDE['ALUResult']
 
 
