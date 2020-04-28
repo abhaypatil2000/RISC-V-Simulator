@@ -996,7 +996,8 @@ def main4():
         fetch()  #flush done in this
         # if (RegDE['Branch'] == RegDE['BranchTaken']):
         if (FLUSHDONE == 0):
-            PCList.append(PC)
+            if (int(InstructionF) != 0):
+                PCList.append(PC)
         FLUSHDONE = 0
         MemList.append(deepcopy(TempMem))
         RegList.append(deepcopy(reg_file))
@@ -1011,6 +1012,11 @@ def main4():
             break
 
 
+main4()
+print(PCList)
+print(clock)
+print(RegList[-1])
+print(InstCount)
 #TODO
 # 1. no increament in PC when fetching the first 2 or 3 instructions (DONE)
 # 2. PCSrs and PCReg are being modified from the prediction table (DONE BRANCHTOBETAKEN used instead)
