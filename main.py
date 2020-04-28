@@ -6,7 +6,6 @@ from S_Format import *
 from common_backend import *
 from Parser import *
 from assembler_directives import *
-from main3 import * 
 
 
 
