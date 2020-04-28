@@ -470,8 +470,12 @@ def decode():
                 RegFD['MemRead'] = int(func3, 2) + 1
             if (opcode == '0000011'):
                 RegFD['MemtoReg'] = 1
-            elif (opcode == '1100111'):
+            elif (opcode == '1100111'):  #jalr
                 RegFD['MemtoReg'] = 2
+                if PC not in btb:
+                    register_number=RegFD['ReadRegister1']
+                    add_instruction(PC,reg_file['x'+str(register_number)]+RegFD['ImmGenOutput'],'T')
+                    regFD['BranchTaken']=1
             RegFD['ALUSrc1'] = 0
         elif (opcode == '0100011'):
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0:7] + InstructionD[20:25]).int
@@ -507,6 +511,7 @@ def decode():
 
             if PC not in btb:
                 add_instruction(PC, PC + (RegFD['ImmGenOutput'] << 1), 'T')
+                regFD['BranchTaken']=1
 
         else:
             RegFD['ALUSrc2'] = 0
