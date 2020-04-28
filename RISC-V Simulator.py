@@ -46,7 +46,7 @@ class Ui_MainWindow(object):
         self.Edit = QtWidgets.QTextEdit(self.Editor)
         font = QtGui.QFont()
         font.setFamily("Ariel")
-        font.setPointSize(10)
+        font.setPointSize(14)
         font.setBold(True)
         font.setWeight(75)
         self.Edit.setFont(font)
@@ -376,7 +376,7 @@ class Ui_MainWindow(object):
         self.tab_2 = QtWidgets.QWidget()
         self.tab_2.setObjectName("tab_2")
         self.memory = QtWidgets.QTextBrowser(self.tab_2)
-        self.memory.setGeometry(QtCore.QRect(160, 20, 311, 491))
+        self.memory.setGeometry(QtCore.QRect(100, 20, 400, 600))
         self.memory.setObjectName("memory")
         self.tabBar2.addTab(self.tab_2, "")
         self.gridLayout.addWidget(self.tabBar2, 0, 2, 3, 1)
@@ -717,7 +717,6 @@ class Ui_MainWindow(object):
         self.output.setStyleSheet("background-color: rgb(0, 0, 0);")
         self.knob1=False
         self.knob2=False
-        self.first=True
         self.Enable_P.changed.connect(self.runpipeline)
         self.menuData_Forwarding.changed.connect(self.dataforwarding)
         
@@ -897,8 +896,14 @@ class Ui_MainWindow(object):
             file_text2=r.read()
             self.machine_code.setText(file_text2)
         #self.machine_code.setEnabled(False)
-        self.Exit_code(MainWindow)
-        self.Simulator.setEnabled(False)
+        #self.Exit_code(MainWindow)
+        self.Simulator.setEnabled(True)
+        self.Run.setEnabled(False)
+        self.Step.setEnabled(False)
+        self.Breakpoint.setEnabled(False)
+        self.Prev.setEnabled(False)
+        self.Clear.setEnabled(False)
+        self.breakline.setEnabled(False)
 
         
         
@@ -918,10 +923,10 @@ class Ui_MainWindow(object):
             self.Edit.setText(file_text)
         main1("input.txt")
         if self.knob1:
-            main4.main4()
             if self.knob2:
                 print("dataForwarding")
-            print("run pipeling")
+            main4.Forwarding=knob2
+            main4.main4()
             self.Step.setEnabled(False)
             self.Breakpoint.setEnabled(False)
             self.Prev.setEnabled(False)
@@ -940,9 +945,9 @@ class Ui_MainWindow(object):
         if self.knob1:
             print("run pipe")
 
-            main4.count=main4.InstCount
+            main4.count=-1
             self.update_reg_pipe()
-            TempMem=main4.MemList[main4.count]
+            TempMem=main4.MemList[-1]
             self.memory.setText(str(TempMem))
             #what about clock
             #output to be added
@@ -967,8 +972,9 @@ class Ui_MainWindow(object):
             #self.memory.setText(str(TempMem)
             #self.memory.append("PCList-"+str(PCList))
             self.output.append("---------------------------------------------------------------------------------")
-            self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
-            self.output.append(">>Clock-"+str(main3.clock))
+            self.output.append(">> Total instrustions executed-"+str(main3.count))
+            self.output.append(">> Current PC-"+str(main3.PCList[main3.count]))
+            self.output.append(">> Clock-"+str(main3.clock*5))
             self.memory.setText(str(TempMem))
             self.output.append("---------------------------------------------------------------------------------")
         self.Run.setEnabled(False)
@@ -987,6 +993,15 @@ class Ui_MainWindow(object):
             self.update_reg_pipe()
         else:
             main3.count=int(self.breakline.text())
+            fmt = QtGui.QTextCharFormat()
+            fmt.setForeground(QtCore.Qt.white)
+            fmt.setBackground(QtCore.Qt.black)
+            block = self.machine_code.document().findBlockByLineNumber(main3.PCList[main3.count]/4)
+            blockPos = block.position()
+            cursor = QtGui.QTextCursor(self.machine_code.document())
+            cursor.setPosition(blockPos)
+            cursor.select(QtGui.QTextCursor.LineUnderCursor)
+            cursor.setCharFormat(fmt)
             if main3.count>main3.InstCount:
                 self.output.append("---------------------------------------------------------------------------------")
                 self.output.append("Out of Range")
@@ -994,8 +1009,9 @@ class Ui_MainWindow(object):
             else:
                 self.update_reg()
                 self.output.append("---------------------------------------------------------------------------------")
-                self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
-                self.output.append(">>Clock-"+str(main3.clock))
+                self.output.append(">> Total instrustions executed-"+str(main3.count))
+                self.output.append(">> Current PC-"+str(main3.PCList[main3.count]))
+                self.output.append(">> Clock-"+str(main3.count*5))
                 TempMem=main3.MemList[main3.count]
                 self.memory.setText(str(TempMem))
                 self.output.append("---------------------------------------------------------------------------------")
@@ -1040,11 +1056,12 @@ class Ui_MainWindow(object):
             self.update_reg()
             main3.clock = main3.clock + 1 if main3.clock < main3.InstCount else main3.clock
             self.output.append("---------------------------------------------------------------------------------")
-            self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
-            self.output.append(">>Clock-"+str(main3.clock))
+            self.output.append(">> Total instrustions executed-"+str(main3.count))
+            self.output.append(">> Current PC-"+str(main3.PCList[main3.count]))
+            self.output.append(">> Clock-"+str(main3.clock*5))
+            self.output.append("---------------------------------------------------------------------------------")
             TempMem=main3.MemList[main3.count]
             self.memory.setText(str(TempMem))
-            self.output.append("---------------------------------------------------------------------------------")
             print(main3.PCList[main3.count])
         #self.Run.setEnabled(False)
         
@@ -1080,8 +1097,9 @@ class Ui_MainWindow(object):
             self.update_reg()
             main3.clock = main3.clock - 1 if main3.clock > 0 else main3.clock
             self.output.append("---------------------------------------------------------------------------------")
-            self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
-            self.output.append(">>Clock-"+str(main3.clock))
+            self.output.append(">> Total instrustions executed-"+str(main3.count))
+            self.output.append(">> Current PC-"+str(main3.PCList[main3.count]))
+            self.output.append(">> Clock-"+str(main3.clock*5))
             TempMem=main3.MemList[main3.count]
             self.memory.setText(str(TempMem))
             self.output.append("---------------------------------------------------------------------------------")
