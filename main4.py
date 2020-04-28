@@ -939,7 +939,7 @@ def flush():
     #TODO update PC (DONE)
 
 
-def main3():
+def main4():
 
     global clock
     global MemList
