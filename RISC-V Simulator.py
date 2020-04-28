@@ -14,7 +14,7 @@ import main3
 import main4
 from readme import Ui_README
 total_lines =0
-TepMem=[]
+TempMem=[]
 class Ui_MainWindow(object):
     def readme_window(self):
         self.window = QtWidgets.QMainWindow()
@@ -942,7 +942,7 @@ class Ui_MainWindow(object):
 
             main4.count=main4.InstCount
             self.update_reg_pipe()
-            TepMem=main4.MemList[main4.count]
+            TempMem=main4.MemList[main4.count]
             self.memory.setText(str(TempMem))
             #what about clock
             #output to be added
@@ -963,7 +963,7 @@ class Ui_MainWindow(object):
             main3.count = main3.InstCount
             main3.clock = main3.InstCount 
             self.update_reg()
-            TepMem=main3.MemList[main3.count]
+            TempMem=main3.MemList[main3.count]
             #self.memory.setText(str(TempMem)
             #self.memory.append("PCList-"+str(PCList))
             self.output.append("---------------------------------------------------------------------------------")
@@ -996,7 +996,7 @@ class Ui_MainWindow(object):
                 self.output.append("---------------------------------------------------------------------------------")
                 self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
                 self.output.append(">>Clock-"+str(main3.clock))
-                TepMem=main3.MemList[main3.count]
+                TempMem=main3.MemList[main3.count]
                 self.memory.setText(str(TempMem))
                 self.output.append("---------------------------------------------------------------------------------")
 
@@ -1042,7 +1042,7 @@ class Ui_MainWindow(object):
             self.output.append("---------------------------------------------------------------------------------")
             self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
             self.output.append(">>Clock-"+str(main3.clock))
-            TepMem=main3.MemList[main3.count]
+            TempMem=main3.MemList[main3.count]
             self.memory.setText(str(TempMem))
             self.output.append("---------------------------------------------------------------------------------")
             print(main3.PCList[main3.count])
@@ -1080,7 +1080,7 @@ class Ui_MainWindow(object):
             self.update_reg()
             main3.clock = main3.clock - 1 if main3.clock > 0 else main3.clock
             self.output.append("---------------------------------------------------------------------------------")
-            self.output.append(">>Current PC-"+str(PCList[main3.count]))
+            self.output.append(">>Current PC-"+str(main3.PCList[main3.count]))
             self.output.append(">>Clock-"+str(main3.clock))
             TempMem=main3.MemList[main3.count]
             self.memory.setText(str(TempMem))
