@@ -2,7 +2,7 @@
 
 from bitstring import BitArray
 from copy import deepcopy
-from btb import *
+from BTB import *
 
 prediction = 0  #TODO prediction changes the fetch and decode
 #TODO STALL them when no prediction
@@ -55,7 +55,7 @@ for i, j in REGTEMP.items():
 FLUSHDONE = 0
 #Branching
 BRANCHTOBETAKEN = 0
-currSTATE='NT'
+currSTATE = 'NT'
 #Pipelining Registers
 PipE = 0
 PipM = 0
@@ -341,16 +341,15 @@ def fetch():
     global TempMem
     #Exit
     global EXIT
-    
+
     if PC in btb:
-         currSTATE=returnCurrentState(PC)
-         if currSTATE!='NT':
-             BRANCHTOBETAKEN=1
-             UPDATEDPC=returnTakenAddress(PC)
-         else:
-             BRANCHTOBETAKEN=0
-    
-    
+        currSTATE = returnCurrentState(PC)
+        if currSTATE != 'NT':
+            BRANCHTOBETAKEN = 1
+            UPDATEDPC = returnTakenAddress(PC)
+        else:
+            BRANCHTOBETAKEN = 0
+
     if (BRANCHTOBETAKEN == 1):
         PC = UPDATEDPC
         BRANCHTOBETAKEN = 0
@@ -365,7 +364,7 @@ def fetch():
     elif (PCSrc == 1):
         PC = PC + (RegDE['ImmGenOutput'] << 1)
 
-    if (RegDE['Branch'] != RegDE['BranchTaken']):
+    if (bool(RegDE['Branch']) != bool(RegDE['BranchTaken'])):
         flush()
 
     ReadAddress = PC  #TODO problem for the first two read instructions (DONE)
@@ -479,36 +478,36 @@ def decode():
             RegFD['MemWrite'] = int(func3, 2) + 1
             RegFD['ALUSrc2'] = 1
             RegFD['ALUSrc1'] = 0
-        elif (opcode == '1100011'):    #branch
+        elif (opcode == '1100011'):  #branch
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0] + InstructionD[24] + InstructionD[1:7] + InstructionD[20:24]).int
             RegFD['ALUSrc2'] = 0
             RegFD['ALUSrc1'] = 0
-            
+
             if PC not in btb:
                 #prePC=PC
                 offset = RegFD['ImmGenOutput'] << 1
                 #PC = PC + offset
-                if offset<0:
-                    add_instruction(PC,PC+offset,'T')
-                    RegFD['BranchTaken']=1
+                if offset < 0:
+                    add_instruction(PC, PC + offset, 'T')
+                    RegFD['BranchTaken'] = 1
                 else:
-                    add_instruction(PC,PC+offset,'NT')
-                    RegFD['BranchTaken']=0
-                    
+                    add_instruction(PC, PC + offset, 'NT')
+                    RegFD['BranchTaken'] = 0
+
         elif (opcode == '0010111' or opcode == '0110111'):
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0:20]).int
             RegFD['ALUSrc2'] = 2
             RegFD['ALUSrc1'] = 1 if opcode == '0010111' else 2
-        elif (opcode == '1101111'):     #jal
+        elif (opcode == '1101111'):  #jal
             RegFD['ImmGenOutput'] = BitArray(bin=InstructionD[0] + InstructionD[12:20] + InstructionD[11] + InstructionD[1:11]).int
             RegFD['ALUSrc2'] = 0
             RegFD['ALUSrc1'] = 0
             RegFD['MemtoReg'] = 2
             RegFD['Branch'] = 1
-            
+
             if PC not in btb:
-                add_instruction(PC,PC+(RegFD['ImmGenOutput'] << 1),'T')
-                
+                add_instruction(PC, PC + (RegFD['ImmGenOutput'] << 1), 'T')
+
         else:
             RegFD['ALUSrc2'] = 0
             RegFD['ALUSrc1'] = 0
@@ -728,11 +727,11 @@ def execute():
         PCSrc = 1
     InstCount = InstCount + 1
 
-    if PCSrc==1 and currSTATE=='NT':
-        update_state(PC,'T')
-    elif PCSrc==0 and currSTATE=='T':
-        update_state(PC,'NT')
-    
+    if PCSrc == 1 and currSTATE == 'NT':
+        update_state(PC, 'T')
+    elif PCSrc == 0 and currSTATE == 'T':
+        update_state(PC, 'NT')
+
     PipE = RegDE['ALUResult']
 
 
@@ -1014,9 +1013,9 @@ def main4():
 
 #TODO
 # 1. no increament in PC when fetching the first 2 or 3 instructions (DONE)
-# 2. PCSrs and PCReg are being modified from the prediction table
-# 3. For data forwarding from E use ALUResult
+# 2. PCSrs and PCReg are being modified from the prediction table (DONE BRANCHTOBETAKEN used instead)
+# 3. For data forwarding from E use ALUResult (SRIKAR DONE)
 # 4. Remove PC from the PCList twice on flush (DONE)
-# 5. Halt when dependency occurs if prediction == 0
-# 6. Use branchTaken and branch for some results
-# 7. Stalling is left
+#TODO 5. Halt when dependency occurs if prediction == 0
+# 6. Use branchTaken and branch for some results (DONE)
+# 7. Stalling is left (DONE by SRIKAR)
