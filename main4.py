@@ -51,6 +51,9 @@ for i, j in REGTEMP.items():
 
 #}
 
+#Dependancy List
+dependancy_registers = []
+Stall = 0
 #Flush
 FLUSHDONE = 0
 #Branching
@@ -64,6 +67,8 @@ PipRegs = [PipE, PipM]
 #DataForwarding
 ForwardA = '00'
 ForwardB = '00'
+FORWARDED = 0
+FORWARDING = False
 
 #Control Signals
 # Branch = 0  #
@@ -341,31 +346,31 @@ def fetch():
     global TempMem
     #Exit
     global EXIT
+    if Stall == 0:
+        if PC in btb:
+            currSTATE = returnCurrentState(PC)
+            if currSTATE != 'NT':
+                BRANCHTOBETAKEN = 1
+                UPDATEDPC = returnTakenAddress(PC)
+            else:
+                BRANCHTOBETAKEN = 0
 
-    if PC in btb:
-        currSTATE = returnCurrentState(PC)
-        if currSTATE != 'NT':
-            BRANCHTOBETAKEN = 1
-            UPDATEDPC = returnTakenAddress(PC)
-        else:
+        if (BRANCHTOBETAKEN == 1):
+            PC = UPDATEDPC
             BRANCHTOBETAKEN = 0
+        elif (PCReg == 1):
+            PC = RegDE['ALUResult']
+            PCReg = 0
+            PCSrc = 0
 
-    if (BRANCHTOBETAKEN == 1):
-        PC = UPDATEDPC
-        BRANCHTOBETAKEN = 0
-    elif (PCReg == 1):
-        PC = RegDE['ALUResult']
-        PCReg = 0
-        PCSrc = 0
+        elif (PCSrc == 0):
+            PC = PC + 4
 
-    elif (PCSrc == 0):
-        PC = PC + 4
+        elif (PCSrc == 1):
+            PC = PC + (RegDE['ImmGenOutput'] << 1)
 
-    elif (PCSrc == 1):
-        PC = PC + (RegDE['ImmGenOutput'] << 1)
-
-    if (bool(RegDE['Branch']) != bool(RegDE['BranchTaken'])):
-        flush()
+        if (bool(RegDE['Branch']) != bool(RegDE['BranchTaken'])):
+            flush()
 
     ReadAddress = PC  #TODO problem for the first two read instructions (DONE)
     PCSrc = 0  #This would make the next instruction to be the PC + 4
@@ -390,6 +395,7 @@ def decode():
     global PCSrc
     global PCReg  #Signal if the PC is updated by the Register value
 
+    global dependancy_registers
     #Register File inputs and Outputs
     # global RegWrite
     # global ReadData1
@@ -440,6 +446,8 @@ def decode():
     #Data Forwarding
     global ForwardA
     global ForwardB
+    global FORWARDED
+    global FORWARDING
     #Pipelining
     global PipE
 
@@ -561,22 +569,31 @@ def decode():
         if (opcode == '1100011' and (func3 == '000' or func3 == '001')):
             RegFD['ALUControl'] = 7
 
-        checkExHazard()
-        CheckMemHazard()
+        if FORWARDING:    
+            checkExHazard()
+            CheckMemHazard()
 
         RegFD['ReadData1'] = reg_file['x' + str(RegFD['ReadRegister1'])]
         RegFD['ReadData2'] = reg_file['x' + str(RegFD['ReadRegister2'])]
 
         if ForwardA == '10':
             RegFD['ReadData1'] = PipE
+            ForwardA = '00'
+            
         elif ForwardA == '01':
             RegFD['ReadData1'] = PipM
+            ForwardA = '00'
 
         if ForwardB == '10':
             RegFD['ReadData2'] = PipE
+            ForwardB = '00'
         elif ForwardB == '01':
             RegFD['ReadData2'] = PipM
+            ForwardB = '00'
 
+        if RegFD['RegWrite'] == 1:
+            dependancy_registers.append(RegFD['WriteRegister'])
+ 
 
 def checkExHazard():
     global ForwardA
@@ -586,9 +603,11 @@ def checkExHazard():
 
     if ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegDE['WriteRegister'] == RegFD['ReadRegister1'])):
         ForwardA = '10'
+        FORWARDED = 1
 
     if ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegFD['WriteRegister'] == RegFD['ReadRegister2'])):
         ForwardB = '10'
+        FORWARDED = 1
 
 
 def CheckMemHazard():
@@ -600,9 +619,11 @@ def CheckMemHazard():
 
     if (RegEM['RegWrite'] == 1 and RegEM['WriteRegister'] != 0 and not ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegDE['WriteRegister'] == RegFD['ReadRegister1'])) and RegEM['WriteRegister'] == RegFD['ReadRegister1']):
         ForwardA = '01'
+        FORWARDED = 1
 
     if (RegEM['RegWrite'] == 1 and RegEM['WriteRegister'] != 0 and not ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegDE['WriteRegister'] == RegFD['ReadRegister2'])) and RegEM['WriteRegister'] == RegFD['ReadRegister2']):
         ForwardB = '01'
+        FORWARDED = 1
 
 
 def execute():
@@ -667,6 +688,8 @@ def execute():
     #Instruction count
     global InstCount
 
+    #Data Forwarding
+    global FORWARDED
     #Pipelining Regs
     global PipE
     #Exit
@@ -675,6 +698,9 @@ def execute():
         return
     if (int(InstructionE) == 0):
         return
+    if FORWARDED == 0 and (((RegDE['ReadRegister1'] in dependancy_registers) and RegDE['ALUSrc1']==0) or ((RegDE['ReadRegister2'] in dependancy_registers and RegDE['ALUSrc1']==0))):
+        Stall = 1
+    FORWARDED = 0
     if (RegDE['ALUSrc1'] == 0):
         RegDE['ALU_input1'] = RegDE['ReadData1']
     elif (RegDE['ALUSrc1'] == 1):
@@ -894,6 +920,7 @@ def writeback():
     #clock
     global clock
 
+    global dependancy_registers
     #TempMem
     global TempMem
     #Exit
@@ -914,6 +941,9 @@ def writeback():
         else:
             reg_file['x' + str(RegMW['WriteRegister'])] = BitArray(hex=RegMW['ReadData'][8:]).int
             reg_file['x' + str((RegMW['WriteRegister'] + 1) % 32)] = BitArray(hex=RegMW['ReadData'][0:8]).int
+
+    if RegMW['WriteRegister'] in dependancy_registers:
+        dependancy_registers.remove(RegMW['WriteRegister'])
     reg_file['x0'] = 0
 
 
@@ -977,6 +1007,7 @@ def main4():
     global InstructionE
     global InstructionM
     global InstructionW
+    global Stall
     global EXIT
     global FLUSHDONE
     print("main4 called")
@@ -989,11 +1020,15 @@ def main4():
         #TODO Flush (DONE)
         InstructionW = InstructionM
         RegMW = RegEM
-        InstructionM = InstructionE
-        RegEM = RegDE
-        InstructionE = InstructionD
-        RegDE = RegFD
-        InstructionD = InstructionF
+        if Stall == 0:
+            InstructionM = InstructionE
+            RegEM = RegDE
+            InstructionE = InstructionD
+            RegDE = RegFD
+            InstructionD = InstructionF
+        else:
+            InstructionM = '0'*32
+            Stall = 0
         writeback()
         memory_access()
         execute()
