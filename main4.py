@@ -50,13 +50,14 @@ for i, j in REGTEMP.items():
 
 #}
 
+#Flush
+FLUSHDONE = 0
+#Branching
+BRANCHTOBETAKEN = 0
 #Pipelining Registers
 PipE = 0
 PipM = 0
-PipRegs = [
-    PipE,
-    PipM
-]
+PipRegs = [PipE, PipM]
 
 #DataForwarding
 ForwardA = '00'
@@ -278,6 +279,7 @@ def write_dword(address, data):
 
 def fetch():
     global RegDE  #as the PC is dependent on the last execute made
+    global BRANCHTOBETAKEN
     #Control Signals
     # global Branch
     # global MemRead
@@ -336,20 +338,23 @@ def fetch():
     global TempMem
     #Exit
     global EXIT
-    if (PCReg == 1):
+    #GURPREET ADD DECISION MAKING
+    if (BRANCHTOBETAKEN == 1):
+        PC = XYZ
+    elif (PCReg == 1):
         PC = RegDE['ALUResult']
         PCReg = 0
         PCSrc = 0
-        if (RegDE['BranchTaken'] == 0):  # TODO dont flush if these values are taken from the prediction table (DONE)
-            flush()
+
     elif (PCSrc == 0):
         PC = PC + 4
-        if (RegDE['BranchTaken'] == 1):
-            flush()
+
     elif (PCSrc == 1):
         PC = PC + (RegDE['ImmGenOutput'] << 1)
-        if (RegDE['BranchTaken'] == 0):  # TODO dont flush if these values are taken from the prediction table (DONE)
-            flush()
+
+    if (RegDE['Branch'] != RegDE['BranchTaken']):
+        flush()
+
     ReadAddress = PC  #TODO problem for the first two read instructions (DONE)
     PCSrc = 0  #This would make the next instruction to be the PC + 4
     PCReg = 0  #This would make the next instruction to be the PC + 4
@@ -361,6 +366,7 @@ def fetch():
 
 def decode():
     global RegFD
+    global BRANCHTOBETAKEN
     #Control Signals
     # global Branch
     # global MemRead
@@ -424,6 +430,9 @@ def decode():
     global ForwardB
     #Pipelining
     global PipE
+
+    if (BRANCHTOBETAKEN == 1):
+        RegFD['BranchTaken'] = 1
     if (EXIT):
         return
     if (int(InstructionD) == 0):
@@ -536,28 +545,18 @@ def decode():
             RegFD['ReadData2'] = PipM
 
 
-    
-
-
 def checkExHazard():
     global ForwardA
     global ForwardB
     global RegDE
     global RegFD
 
-    if (
-            (RegDE['RegWrite'] == 1) and 
-            (RegDE['WriteRegister'] != 0) and 
-            (RegDE['WriteRegister'] == RegFD['ReadRegister1']) 
-        ):
+    if ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegDE['WriteRegister'] == RegFD['ReadRegister1'])):
         ForwardA = '10'
-    
-    if (
-            (RegDE['RegWrite'] == 1) and 
-            (RegDE['WriteRegister'] != 0) and 
-            (RegFD['WriteRegister'] == RegFD['ReadRegister2'])
-        ):
+
+    if ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegFD['WriteRegister'] == RegFD['ReadRegister2'])):
         ForwardB = '10'
+
 
 def CheckMemHazard():
     global ForwardA
@@ -566,29 +565,12 @@ def CheckMemHazard():
     global RegEM
     global RegDE
 
-    if (
-        RegEM['RegWrite'] == 1 and
-        RegEM['WriteRegister'] != 0 and
-        not (
-            (RegDE['RegWrite'] == 1) and 
-            (RegDE['WriteRegister'] != 0) and 
-            (RegDE['WriteRegister'] == RegFD['ReadRegister1']) 
-        ) and
-        RegEM['WriteRegister'] == RegFD['ReadRegister1']
-    ): 
+    if (RegEM['RegWrite'] == 1 and RegEM['WriteRegister'] != 0 and not ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegDE['WriteRegister'] == RegFD['ReadRegister1'])) and RegEM['WriteRegister'] == RegFD['ReadRegister1']):
         ForwardA = '01'
 
-    if (
-        RegEM['RegWrite'] == 1 and
-        RegEM['WriteRegister'] != 0 and
-        not (
-            (RegDE['RegWrite'] == 1) and 
-            (RegDE['WriteRegister'] != 0) and 
-            (RegDE['WriteRegister'] == RegFD['ReadRegister2']) 
-        ) and
-        RegEM['WriteRegister'] == RegFD['ReadRegister2']
-    ):
+    if (RegEM['RegWrite'] == 1 and RegEM['WriteRegister'] != 0 and not ((RegDE['RegWrite'] == 1) and (RegDE['WriteRegister'] != 0) and (RegDE['WriteRegister'] == RegFD['ReadRegister2'])) and RegEM['WriteRegister'] == RegFD['ReadRegister2']):
         ForwardB = '01'
+
 
 def execute():
     global RegDE
@@ -817,6 +799,7 @@ def memory_access():
 
     PipM = RegEM['ReadData']
 
+
 def writeback():
     global RegMW
     #Control Signals
@@ -903,7 +886,7 @@ def check():
     global InstructionM
     global InstructionW
     global EXIT
-    
+
     if (int(InstructionF) == int(InstructionD) == int(InstructionE) == int(InstructionM) == int(InstructionW) == 0):
         EXIT = True
 
@@ -928,14 +911,15 @@ def flush():
     global RegDE
     global RegEM
     global RegMW
+    global FLUSHDONE
+    FLUSHDONE = 1
     InstructionF = '0' * 32
     InstructionD = '0' * 32
     for i, j in REGTEMP.items():
         RegFD[i] = j
-        RegDE[i] = j
-    PCList.pop()
     PCList.pop()
     PC = RegDE['PC']
+
     #TODO update PC (DONE)
 
 
@@ -956,6 +940,7 @@ def main4():
     global InstructionM
     global InstructionW
     global EXIT
+    global FLUSHDONE
     print("main4 called")
     initialize_mem()
     MemList.append(deepcopy(TempMem))
@@ -975,8 +960,11 @@ def main4():
         memory_access()
         execute()
         decode()
-        fetch()
-        PCList.append(PC)
+        fetch()  #flush done in this
+        # if (RegDE['Branch'] == RegDE['BranchTaken']):
+        if (FLUSHDONE == 0):
+            PCList.append(PC)
+        FLUSHDONE = 0
         MemList.append(deepcopy(TempMem))
         RegList.append(deepcopy(reg_file))
 
@@ -996,3 +984,5 @@ def main4():
 # 3. For data forwarding from E use ALUResult
 # 4. Remove PC from the PCList twice on flush (DONE)
 # 5. Halt when dependency occurs if prediction == 0
+# 6. Use branchTaken and branch for some results
+# 7. Stalling is left
