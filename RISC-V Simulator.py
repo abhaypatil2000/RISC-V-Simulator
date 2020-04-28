@@ -952,16 +952,17 @@ class Ui_MainWindow(object):
             #what about clock
             #output to be added
             self.output.append("---------------------------------------------------------------------------------")
-            self.output.append(">> Total instrustions executed-")
-            self.output.append(">> CPI-")
-            self.output.append(">> No. of Data-transfer instrustions executed-")
-            self.output.append(">> No. of ALU instructions executed-")
-            self.output.append(">> No. of stalls/bubbles in the pipeline")
-            self.output.append(">> NO. of data hazards")
-            self.output.append(">> No. of control hazards")
-            self.output.append(">> No.of branch minpredections")
-            self.output.append(">> No. of stalls due to data hazards")
-            self.output.append(">> No. of stalls due to control hazards")
+            self.output.append(">> Total instrustions executed-"+str(main4.InstCount))
+            self.output.append(">> CPI-"+str(main4.clock/main4.InstCount))
+            self.output.append(">> Clock-"+str(main4.clock)
+            self.output.append(">> No. of Data-transfer instrustions executed-"+str(main4.data_transfer))
+            self.output.append(">> No. of ALU instructions executed-"+str(main4.alu_InstCount))
+            self.output.append(">> No. of stalls/bubbles in the pipeline"+str(main4.Stalls))
+            self.output.append(">> NO. of data hazards"+str(main4.data_hazards))
+            self.output.append(">> No. of control hazards"+str(main4.control_hazards))
+            self.output.append(">> No.of branch minpredections"+str(main4.branch_pre))
+            self.output.append(">> No. of stalls due to data hazards"+str(main4.stalls_data))
+            self.output.append(">> No. of stalls due to control hazards"+str(main4.stalls_control))
             self.output.append("---------------------------------------------------------------------------------")
             
         else:
